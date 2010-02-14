@@ -1,0 +1,4 @@
+.DS_Store
+
+atrium/sites/default/settings.php
+atrium/sites/default/files/**/*
