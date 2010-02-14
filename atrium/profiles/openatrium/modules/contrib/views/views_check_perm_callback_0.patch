@@ -1,0 +1,86 @@
+diff --git plugins/views_plugin_access_perm.inc plugins/views_plugin_access_perm.inc
+index e88d151..588b562 100644
+--- plugins/views_plugin_access_perm.inc
++++ plugins/views_plugin_access_perm.inc
+@@ -6,11 +6,11 @@
+  */
+ class views_plugin_access_perm extends views_plugin_access {
+   function access($account) {
+-    return user_access($this->options['perm'], $account);
++    return views_check_perm($this->options['perm'], $account);
+   }
+ 
+   function get_access_callback() {
+-    return array('user_access', array($this->options['perm']));
++    return array('views_check_perm', array($this->options['perm']));
+   }
+ 
+   function summary_title() {
+diff --git plugins/views_plugin_access_role.inc plugins/views_plugin_access_role.inc
+index 89989df..ce36924 100644
+--- plugins/views_plugin_access_role.inc
++++ plugins/views_plugin_access_role.inc
+@@ -6,9 +6,7 @@
+  */
+ class views_plugin_access_role extends views_plugin_access {
+   function access($account) {
+-    $roles = array_keys($account->roles);
+-    $roles[] = $account->uid ? DRUPAL_AUTHENTICATED_RID : DRUPAL_ANONYMOUS_RID;
+-    return array_intersect(array_filter($this->options['role']), $roles);
++    return views_check_roles(array_filter($this->options['role']), $account);
+   }
+ 
+   function get_access_callback() {
+diff --git views.module views.module
+index e3474de..a5d3655 100644
+--- views.module
++++ views.module
+@@ -428,10 +428,6 @@ function views_invalidate_cache() {
+  * is accessible, then the view is accessible.
+  */
+ function views_access() {
+-  if (user_access('access all views')) {
+-    return TRUE;
+-  }
+-
+   $args = func_get_args();
+   foreach ($args as $arg) {
+     if ($arg === TRUE) {
+@@ -452,17 +448,29 @@ function views_access() {
+ }
+ 
+ /**
+- * Access callback to determine if the logged in user has any of the
+- * requested roles.
++ * Access callback for the views_plugin_access_perm access plugin.
+  *
+- * This must be in views.module as it is called by menu access callback
+- * and can be called often.
++ * Determine if the specified user has access to a view on the basis of
++ * permissions. If the $account argument is omitted, the current user
++ * is used.
++ */
++function views_check_perm($perm, $account = NULL) {
++  return user_access($perm, $account) || user_access('access all views', $account);
++}
++
++/**
++ * Access callback for the views_plugin_access_role access plugin.
++
++ * Determine if the specified user has access to a view on the basis of any of
++ * the requested roles. If the $account argument is omitted, the current user
++ * is used.
+  */
+-function views_check_roles($rids) {
++function views_check_roles($rids, $account = NULL) {
+   global $user;
+-  $roles = array_keys($user->roles);
+-  $roles[] = $user->uid ? DRUPAL_AUTHENTICATED_RID : DRUPAL_ANONYMOUS_RID;
+-  return array_intersect(array_filter($rids), $roles);
++  $account = isset($account) ? $user : $account;
++  $roles = array_keys($account->roles);
++  $roles[] = $account->uid ? DRUPAL_AUTHENTICATED_RID : DRUPAL_ANONYMOUS_RID;
++  return user_access('access all views', $account) || array_intersect(array_filter($rids), $roles);
+ }
+ // ------------------------------------------------------------------
+ // Functions to help identify views that are running or ran
