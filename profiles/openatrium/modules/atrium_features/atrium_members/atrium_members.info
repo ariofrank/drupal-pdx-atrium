@@ -31,10 +31,3 @@ name = "Atrium Members"
 package = "Atrium"
 spaces[types][] = "site"
 spaces[types][] = "og"
-
-; Information added by fserver
-core = "6.x"
-datestamp = "1266518101"
-project = "atrium_features"
-project status url = "http://code.developmentseed.org/fserver"
-version = "6.x-1.0-alpha3"
