@@ -1,4 +1,4 @@
-$Id: README.txt,v 1.19 2010/02/11 15:57:38 alexb Exp $
+$Id: README.txt,v 1.17 2010/02/08 15:30:30 alexb Exp $
 
 
 "It feeds"
@@ -79,10 +79,8 @@ http://drupal.org/node/622700
 Performance
 ===========
 
-Use Drupal Queue to improve Feeds' performance when scheduling many very active
-feeds. An example for "many very active feeds" would be 300 news feeds with an
-average of four items a day.
-http://drupal.org/project/drupal_queue
+Untested. There is support for drupal_queue module in the works.
+http://drupal.org/node/599180
 
 Hidden settings
 ===============
@@ -126,11 +124,6 @@ Description: The table used by FeedsDataProcessor to store feed items. Usually a
              FeedsDataProcessor builds a table name from a prefix (feeds_data_)
              and the importer's id ($importer_id). This default table name can
              be overridden by defining a variable with the same name.
-
-Name:        feeds_node_batch_size
-Default:     50
-             The number of nodes feed node processor creates or deletes in one
-             page load.
 
 Glossary
 ========

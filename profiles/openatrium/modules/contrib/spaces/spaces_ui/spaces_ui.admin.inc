@@ -1,5 +1,5 @@
 <?php
-// $Id: spaces_ui.admin.inc,v 1.1.2.4 2010/02/09 21:05:32 jmiccolis Exp $
+// $Id: spaces_ui.admin.inc,v 1.1.2.5 2010/02/15 03:33:52 yhahn Exp $
 
 /**
  * Presets form.
@@ -43,7 +43,7 @@ function spaces_preset_list($form_state) {
   // Generate preset options.
   foreach ($types as $type => $title) {
     module_load_include('inc', 'spaces', 'spaces.admin');
-    $presets = spaces_preset_load(NULL, $type);
+    $presets = spaces_preset_load(NULL, $type, TRUE);
     ksort($presets);
     $form[$type] = spaces_preset_form($presets, $type);
     $form[$type]['#title'] = t('@spacetype presets', array('@spacetype' => $title));

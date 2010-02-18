@@ -84,3 +84,10 @@ designkit[color][background][default] = "#44aa55"
 designkit[image][logo][title] = "Logo"
 designkit[image][logo][description] = "Header logo."
 designkit[image][logo][imagecache] = "imagecache_scale:300x40"
+
+; Information added by fserver
+core = "6.x"
+datestamp = "1266518008"
+project = "ginkgo"
+project status url = "http://code.developmentseed.org/fserver"
+version = "6.x-1.0-alpha3"

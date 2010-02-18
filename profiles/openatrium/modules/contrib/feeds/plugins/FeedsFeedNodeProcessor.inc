@@ -1,5 +1,5 @@
 <?php
-// $Id: FeedsFeedNodeProcessor.inc,v 1.8 2010/02/10 23:49:35 alexb Exp $
+// $Id: FeedsFeedNodeProcessor.inc,v 1.7 2009/12/20 23:48:38 alexb Exp $
 
 /**
  * @file
@@ -16,6 +16,10 @@ class FeedsFeedNodeProcessor extends FeedsProcessor {
    * Implementation of FeedsProcessor::process().
    */
   public function process(FeedsImportBatch $batch, FeedsSource $source) {
+
+    // Count number of created and updated nodes.
+    $created  = $updated = 0;
+
     while ($item = $batch->shiftItem()) {
 
       // If the target item does not exist OR if update_existing is enabled,
@@ -35,32 +39,30 @@ class FeedsFeedNodeProcessor extends FeedsProcessor {
         node_save($node);
 
         if ($nid) {
-          $batch->updated++;
+          $updated++;
         }
         else {
-          $batch->created++;
+          $created++;
         }
       }
     }
 
     // Set messages.
-    if ($batch->created) {
-      drupal_set_message(t('Created !number !type nodes.', array('!number' => $batch->created, '!type' => $this->config['content_type'])));
+    if ($created) {
+      drupal_set_message(t('Created !number !type nodes.', array('!number' => $created, '!type' => $this->config['content_type'])));
     }
-    elseif ($batch->updated) {
-      drupal_set_message(t('Updated !number !type nodes.', array('!number' => $batch->updated, '!type' => $this->config['content_type'])));
+    elseif ($updated) {
+      drupal_set_message(t('Updated !number !type nodes.', array('!number' => $updated, '!type' => $this->config['content_type'])));
     }
     else {
       drupal_set_message(t('There is no new content.'));
     }
-
-    return FEEDS_BATCH_COMPLETE;
   }
 
   /**
    * Implementation of FeedsProcessor::clear().
    */
-  public function clear(FeedsBatch $batch, FeedsSource $source) {
+  public function clear(FeedsSource $source) {
     // Do not support deleting imported items as we would have to delete all
     // items of the content type we imported which may contain nodes that a
     // user created by hand.

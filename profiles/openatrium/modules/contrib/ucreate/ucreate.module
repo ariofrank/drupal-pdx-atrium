@@ -1,5 +1,5 @@
 <?php
-// $Id: ucreate.module,v 1.3.4.7 2010/02/04 00:53:32 yhahn Exp $
+// $Id: ucreate.module,v 1.3.4.8 2010/02/17 11:25:40 yhahn Exp $
 /**
  * @file
  * U create - allows non site admins create and block users.
@@ -117,11 +117,13 @@ function ucreate_user_form() {
     '#type' => 'textfield',
     '#title' => t('User name'),
     '#required' => TRUE,
+    '#element_validate' => array('ucreate_validate_name'),
     );
   $form['mail'] = array(
     '#type' => 'textfield',
     '#title' => t('E-mail'),
     '#required' => TRUE,
+    '#element_validate' => array('ucreate_validate_mail'),
     );
   $form['mail_confirm'] = array(
     '#type' => 'textfield',
@@ -173,18 +175,30 @@ function ucreate_user_form() {
 }
 
 /**
- * Validation handler for ucreate_user_form().
+ * Element validator for usernames.
  */
-function ucreate_user_form_validate($form, &$form_state) {
-  if ($account = user_load(array('name' => $form_state['values']['name']))) {
+function ucreate_validate_name($element, &$form_state) {
+  if ($account = user_load(array('name' => $element['#value']))) {
     $name = user_access('access user profiles') ? l($account->name, 'user/'. $account->uid) : $account->name;
     form_set_error('name', t('User !name already exists.', array('!name' => $name)));
   }
-  if ($form_state['values']['mail'] != $form_state['values']['mail_confirm']) {
-    form_set_error('email_confirm', t('E-mail addresses don\'t match'));
+  else if ($error = user_validate_name($element['#value'])) {
+    form_set_error('name', $error);
   }
-  else if (user_load(array('mail' => $form_state['values']['mail']))) {
+}
+
+/**
+ * Element validator for mail.
+ */
+function ucreate_validate_mail($element, &$form_state) {
+  if ($form_state['values']['mail_confirm'] !== $element['#value']) {
+    form_set_error('mail_confirm', t('E-mail addresses don\'t match'));
+  }
+  else if (user_load(array('mail' => $element['#value']))) {
     form_set_error('mail', t('User with this e-mail address already exists.'));
+  }
+  else if ($error = user_validate_mail($element['#value'])) {
+    form_set_error('mail', $error);
   }
 }
 

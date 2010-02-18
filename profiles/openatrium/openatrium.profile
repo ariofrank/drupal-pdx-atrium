@@ -1,5 +1,5 @@
 <?php
-// $Id: openatrium.profile,v 1.2 2010/02/12 20:26:32 jmiccolis Exp $
+// $Id: openatrium.profile,v 1.6 2010/02/17 20:40:39 adrian Exp $
 
 /**
  * Implementation of hook_profile_details().
@@ -37,10 +37,10 @@ function openatrium_profile_modules() {
     'views', 'litenode',
     // OG
     'og', 'og_access', 'og_actions', 'og_views',
-    // Context
-    'context', 'context_ui', 'context_layouts',
     // CTools
     'ctools',
+    // Context
+    'context', 'context_ui', 'context_layouts',
     // Date
     'date_api', 'date_timezone',
     // Features
@@ -142,6 +142,11 @@ function openatrium_profile_tasks(&$task, $url) {
 
   // Download and install translation if needed
   if ($task == 'profile') {
+    // Rebuild the language list.
+    // When running through the CLI, the static language list will be empty
+    // unless we repopulate it from the ,newly available, database.
+    language_list('name', TRUE);
+
     if (_openatrium_language_selected() && module_exists('atrium_translate')) {
       module_load_install('atrium_translate');
       if ($batch = atrium_translate_create_batch($install_locale, 'install')) {
@@ -260,8 +265,39 @@ function _openatrium_intranet_configure() {
 
   // Set a default footer message.
   variable_set('site_footer', '&copy; 2009 '. l('Development Seed', 'http://www.developmentseed.org', array('absolute' => TRUE)));
+}
+
+/**
+ * Configuration. Second stage.
+ */
+function _openatrium_intranet_configure_check() {
+  // This isn't actually necessary as there are no node_access() entries,
+  // but we run it to prevent the "rebuild node access" message from being
+  // shown on install.
+  node_access_rebuild();
+
+  // Rebuild key tables/caches
+  drupal_flush_all_caches();
+
+  // Set default theme. This must happen after drupal_flush_all_caches(), which
+  // will run system_theme_data() without detecting themes in the install
+  // profile directory.
+  _openatrium_system_theme_data();
+  db_query("UPDATE {blocks} SET status = 0, region = ''"); // disable all DB blocks
+  db_query("UPDATE {system} SET status = 0 WHERE type = 'theme' and name ='%s'", 'garland');
+  db_query("UPDATE {system} SET status = 0 WHERE type = 'theme' and name ='%s'", 'ginkgo');
+  variable_set('theme_default', 'ginkgo');
+
+  // In Aegir install processes, we need to init strongarm manually as a
+  // separate page load isn't available to do this for us.
+  if (function_exists('strongarm_init')) {
+    strongarm_init();
+  }
 
   // Revert key components that are overridden by others on install.
+  // Note that this comes after all other processes have run, as some cache
+  // clears/rebuilds actually set variables or other settings that would count
+  // as overrides. See `og_node_type()`.
   $revert = array(
     'atrium' => array('user', 'variable', 'filter'),
     'atrium_blog' => array('user', 'variable'),
@@ -274,33 +310,6 @@ function _openatrium_intranet_configure() {
     'atrium_shoutbox' => array('user', 'variable'),
   );
   features_revert($revert);
-}
-
-/**
- * Configuration. Second stage.
- */
-function _openatrium_intranet_configure_check() {
-  // This isn't actually necessary as there are no node_access() entries,
-  // but we run it to prevent the "rebuild node access" message from being
-  // shown on install.
-  node_access_rebuild();
-
-  // @TODO: Don't appear to be necessary for functional Atrium install.
-  // Determine if these were added for Aegir.
-
-  // Rebuild key tables/caches
-  // module_rebuild_cache();
-  // drupal_get_schema(NULL, TRUE);
-  drupal_flush_all_caches();
-
-  // Set default theme. This must happen after drupal_flush_all_caches(), which
-  // will run system_theme_data() without detecting themes in the install
-  // profile directory.
-  _openatrium_system_theme_data();
-  db_query("UPDATE {blocks} SET status = 0, region = ''"); // disable all DB blocks
-  db_query("UPDATE {system} SET status = 0 WHERE type = 'theme' and name ='%s'", 'garland');
-  db_query("UPDATE {system} SET status = 0 WHERE type = 'theme' and name ='%s'", 'ginkgo');
-  variable_set('theme_default', 'ginkgo');
 }
 
 /**

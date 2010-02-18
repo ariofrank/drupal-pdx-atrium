@@ -4,3 +4,9 @@ dependencies[] = "spaces"
 description = "Provides an administrative UI for managing Spaces settings."
 name = "Spaces UI"
 package = "Spaces"
+; Information added by drupal.org packaging script on 2010-02-17
+version = "6.x-3.0-beta2"
+core = "6.x"
+project = "spaces"
+datestamp = "1266436826"
+

@@ -1,5 +1,5 @@
 <?php
-// $Id: spaces_og.pages.inc,v 1.1.2.6 2010/02/10 18:23:17 yhahn Exp $
+// $Id: spaces_og.pages.inc,v 1.1.2.7 2010/02/17 12:15:14 yhahn Exp $
 
 /**
  * Form for modifying a user's OG subscriptions quickly.
@@ -99,11 +99,17 @@ function _spaces_og_form_alter_group(&$form, $form_state) {
     $form['spaces_preset'] = spaces_preset_form($presets, 'og', 'save');
   }
 
-  // Pass existing space through
+  // Pass existing space through.
   if ($nid) {
     $form['space'] = array('#type' => 'value', '#value' => $space);
   }
+
+  // Add additional submit handler that redirects to group homepage.
+  if (!empty($form['buttons']['submit']['#submit'])) {
+    $form['buttons']['submit']['#submit'][] = 'spaces_og_form_group_submit';
+  }
 }
+
 
 /**
  * Custom submit handler for group delete confirmation.

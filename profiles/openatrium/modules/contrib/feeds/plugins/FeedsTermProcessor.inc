@@ -1,5 +1,5 @@
 <?php
-// $Id: FeedsTermProcessor.inc,v 1.4 2010/02/10 23:49:35 alexb Exp $
+// $Id: FeedsTermProcessor.inc,v 1.3 2009/12/20 23:27:28 alexb Exp $
 
 /**
  * @file
@@ -69,14 +69,16 @@ class FeedsTermProcessor extends FeedsProcessor {
     else {
       drupal_set_message(t('There are no new terms.'));
     }
-
-    return FEEDS_NODE_BATCH_SIZE;
   }
 
   /**
-   * Implementation of FeedsProcessor::clear().
+   * Implement clear.
+   *
+   * @param $source
+   *   FeedsSource of this term. FeedsTermProcessor does not heed this
+   *   parameter, it deletes all terms from a vocabulary.
    */
-  public function clear(FeedsBatch $batch, FeedsSource $source) {
+  public function clear(FeedsSource $source) {
     $deleted = 0;
 
     $result = db_query('SELECT tid FROM {term_data} WHERE vid = %d', $this->config['vocabulary']);
@@ -95,7 +97,6 @@ class FeedsTermProcessor extends FeedsProcessor {
     else {
       drupal_set_message(t('No terms to be deleted.'));
     }
-    return FEEDS_BATCH_COMPLETE;
   }
 
   /**

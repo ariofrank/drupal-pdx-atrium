@@ -189,6 +189,9 @@ class FeedAPI2Feeds {
     }
     // Otherwise, create a new importer from the legacy FeedAPI configuration.
     if (!isset($importer)) {
+      if (!function_exists('feedapi_get_settings')) {
+        module_load_include('inc', 'feedapi2feeds', 'feedapi2feeds.legacy');
+      }
       $settings = feedapi_get_settings($type);
 
       // 1) Create new importer and configure it
@@ -208,10 +211,13 @@ class FeedAPI2Feeds {
       } while ($collision);
 
       // Enable given parsers, processors w/ configuration, Feeds do not support multi parser, processor
-      $parser = $this->getActive($settings, 'parsers');
-      $processor = $this->getActive($settings, 'processors');
+      if (!empty($settings)) {
+        $parser = $this->getActive($settings, 'parsers');
+        $processor = $this->getActive($settings, 'processors');
+      }
       if (empty($parser) || empty($processor)) {
         throw new Exception($type . ' content-type cannot migrated because there is no enabled parser or processor for it.');
+        break;
       }
       if (!isset($this->dictionary[$parser])) {
         throw new Exception($parser . ' parser is not supported by this migration script, skipping '. $type);
@@ -424,7 +430,7 @@ class FeedAPI2Feeds {
   }
 
   /**
-   * FeedAPI Node processor support for migration script
+   * FeedAPI Fast processor support for migration script
    *
    * Migrate items
    *
@@ -434,11 +440,13 @@ class FeedAPI2Feeds {
    *   Importer object
    */
   private function feedapi2feeds_item_feedapi_fast($type, $importer) {
-    db_query("INSERT INTO {feeds_data_" . $importer->id . "}
-    (feed_nid, timestamp, title, description, url, guid)
-    (SELECT fi.feed_nid, f.published, f.title, f.description, f.url, f.guid FROM feedapi_fast_item f
-    LEFT JOIN feedapi_fast_item_feed fi ON f.fid = feed_item_fid
-    LEFT JOIN node n ON fi.feed_nid = n.nid WHERE n.type='%s')", $type);
+    if (db_table_exists('feedapi_fast_item')) {
+      db_query("INSERT INTO {feeds_data_" . $importer->id . "}
+      (feed_nid, timestamp, title, description, url, guid)
+      (SELECT fi.feed_nid, f.published, f.title, f.description, f.url, f.guid FROM {feedapi_fast_item} f
+      LEFT JOIN {feedapi_fast_item_feed} fi ON f.fid = feed_item_fid
+      LEFT JOIN {node} n ON fi.feed_nid = n.nid WHERE n.type='%s')", $type);
+    }
   }
 
   /**

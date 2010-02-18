@@ -1,5 +1,5 @@
 <?php
-// $Id: spaces_og.module,v 1.1.2.29.2.24.2.20 2010/02/09 16:37:07 yhahn Exp $
+// $Id: spaces_og.module,v 1.1.2.29.2.24.2.22 2010/02/17 12:15:14 yhahn Exp $
 
 /**
  * Implementation of hook_ctools_plugin_api().
@@ -253,6 +253,15 @@ function spaces_og_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
           $directory = $space->controllers->variable->get('spaces_og_directory');
           $node->og_directory = $directory === NULL ? TRUE : $directory;
           $private = $space->controllers->variable->get('spaces_og_private');
+          if ($op == 'update' && $private != $node->og_private) {
+            // Privacy has changed, update og_public flags, and queue a rebuid.
+            db_query("UPDATE {og_access_post} og_p 
+                      INNER JOIN {og_ancestry} og_a ON og_p.nid = og_a.nid
+                      INNER JOIN {node} n ON og_p.nid = n.nid
+                      SET og_public = %d WHERE og_a.group_nid = %d",
+                      !$private, $node->nid);
+            node_access_needs_rebuild(TRUE);
+          }
           $node->og_private = $private === NULL ? FALSE : $private;
           og_update_group($node);
         }
@@ -262,12 +271,10 @@ function spaces_og_nodeapi(&$node, $op, $teaser = NULL, $page = NULL) {
         if (is_array($node->purl) && !empty($node->purl['value'])) {
           $modifier['value'] = $node->purl['value'];
           purl_save($modifier);
-          purl_disable(TRUE); // Prevents redirection with former PURL modifier.
         }
         else if (empty($node->purl)) {
           $modifier['value'] = "{$node->type}-{$node->nid}";
           purl_save($modifier);
-          purl_disable(TRUE); // Prevents redirection with former PURL modifier.
         }
         break;
       case 'delete':
@@ -346,6 +353,22 @@ function spaces_og_form_alter(&$form, $form_state, $form_id) {
     else if (!og_is_omitted_type($form['#node']->type)) {
       module_load_include('inc', 'spaces_og', 'spaces_og.pages');
       _spaces_og_form_alter_node($form, $form_state);
+    }
+  }
+}
+
+/**
+ * Group form submit handler.
+ */
+function spaces_og_form_group_submit($form, &$form_state) {
+  if (!empty($form_state['nid']) && $space = spaces_load('og', $form_state['nid'])) {
+    $preset_val = $space->controllers->variable->get('site_frontpage', 'preset');
+    $space_val = $space->controllers->variable->get('site_frontpage', 'space');
+    if (!empty($preset_val) || !empty($space_val)) {
+      purl_goto($space->controllers->variable->get('site_frontpage'), array('purl' => array('provider' => 'spaces_og', 'id' => $space->id)));
+    }
+    else {
+      purl_goto("node/{$space->id}", array('purl' => array('provider' => 'spaces_og', 'id' => $space->id)));
     }
   }
 }

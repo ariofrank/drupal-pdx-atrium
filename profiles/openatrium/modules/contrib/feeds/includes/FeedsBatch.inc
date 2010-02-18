@@ -1,23 +1,5 @@
 <?php
-// $Id: FeedsBatch.inc,v 1.4 2010/02/10 23:49:35 alexb Exp $
-
-/**
- * A FeedsBatch object holds the state of an import or clear batch. Used in
- * FeedsSource class.
- */
-class FeedsBatch {
-  // Public counters for easier access.
-  public $total;
-  public $created;
-  public $updated;
-  public $deleted;
-  public function __construct() {
-    $this->total = 0;
-    $this->created = 0;
-    $this->updated = 0;
-    $this->deleted = 0;
-  }
-}
+// $Id: FeedsBatch.inc,v 1.3 2010/02/08 19:48:15 alexb Exp $
 
 /**
  * A FeedsImportBatch is the actual content retrieved from a FeedsSource. On
@@ -27,7 +9,7 @@ class FeedsBatch {
  * @see FeedsSource class
  * @see FeedsFetcher class
  */
-class FeedsImportBatch extends FeedsBatch {
+class FeedsImportBatch {
 
   protected $url;
   protected $file_path;
@@ -44,7 +26,6 @@ class FeedsImportBatch extends FeedsBatch {
     $this->url = $url;
     $this->file_path = $file_path;
     $this->items = array();
-    parent::__construct();
   }
 
   /**
@@ -52,17 +33,21 @@ class FeedsImportBatch extends FeedsBatch {
    *   The raw content of the feed.
    */
   public function getRaw() {
-    if ($this->file_path) {
-      return file_get_contents(realpath($this->file_path));
-    }
-    elseif ($this->url) {
-      feeds_include_library('http_request.inc', 'http_request');
-      $result = http_request_get($this->url);
-      if ($result->code != 200) {
-        throw new Exception(t('Download of @url failed with code !code.', array('@url' => $this->url, '!code' => $result->code)));
+    if (empty($this->raw)) {
+      // Prefer file.
+      if ($this->file_path) {
+        $this->raw = file_get_contents(realpath($this->file_path));
       }
-      return $result->data;
+      elseif ($this->url) {
+        feeds_include_library('http_request.inc', 'http_request');
+        $result = http_request_get($this->url);
+        if ($result->code != 200) {
+          throw new Exception(t('Download of @url failed with code !code.', array('@url' => $this->url, '!code' => $result->code)));
+        }
+        $this->raw = $result->data;
+      }
     }
+    return $this->raw;
   }
 
   /**
@@ -148,13 +133,12 @@ class FeedsImportBatch extends FeedsBatch {
 
   /**
    * Set items.
-   *
+   * 
    * @param $items
    *   An array of the items in the feed. Cannot be NULL.
    */
   public function setItems($items) {
     $this->items = $items;
-    $this->total = count($items);
   }
 
   /**

@@ -25,6 +25,15 @@
   -webkit-border-top-left-radius:0px;
   }
 
+.dropdown-blocks div.block-toggle li a,
+.dropdown-blocks div.block-toggle div.more-link a { padding:2px 10px 2px 40px; }
+
+.dropdown-blocks div.block-toggle li a span {
+  float:right;
+  margin-right:0px;
+  margin-left:10px;
+  }
+
 /* Panes */
 .dropdown-blocks div.block-toggle div.panes { background-position:359px 0px; }
 
@@ -89,7 +98,7 @@
  */
 div.drilldown span.trail a {
   background-image:url(images/sprite_base-rtl.png);
-  background-position:100% -110px;
+  background-position:100% -160px;
   }
 
 div.drilldown span.trail a.depth-1,
@@ -106,32 +115,32 @@ div.drilldown span.trail a.depth-1 {
 
 div.drilldown span.trail a.depth-2 {
   padding-right:50px;
-  background-position:30px -70px;
+  background-position:30px -160px;
   }
 
 div.drilldown span.trail a.depth-3 {
   padding-right:75px;
-  background-position:55px -70px;
+  background-position:55px -160px;
   }
 
 div.drilldown span.trail a.depth-4 {
   padding-right:100px;
-  background-position:80px -70px;
+  background-position:80px -160px;
   }
 
 div.drilldown span.trail a.depth-5 {
   padding-right:125px;
-  background-position:105px -70px;
+  background-position:105px -160px;
   }
 
 div.drilldown span.trail a.depth-6 {
   padding-right:150px;
-  background-position:130px -70px;
+  background-position:130px -160px;
   }
 
 div.drilldown span.trail a.depth-7 {
   padding-right:175px;
-  background-position:155px -70px;
+  background-position:155px -160px;
   }
 
 div.block-atrium ul.menu a,
@@ -170,7 +179,7 @@ div.block-atrium ul.menu li.expanded {
 
 div.block-atrium ul.menu li.leaf {
   background-image:url(images/sprite_base-rtl.png);
-  background-position:100% -85px;
+  background-position:100% -110px;
   }
 
 /**
@@ -253,4 +262,25 @@ div.block div.views-exposed-form div.views-exposed-widget { padding:5px 100px 4p
 div.block div.views-exposed-form div.views-exposed-widget label {
   right:0px;
   left:auto;
+  }
+
+/**
+ * Pager ==============================================================
+ */
+#palette div.block div.minipager,
+div.page-region div.block div.boxes-box-controls,
+div.page-region div.block div.minipager {
+  right:auto;
+  left:5px;
+  }
+
+/**
+ * Atrium welcome blocks ==============================================
+ */
+.atrium-welcome-links .column { float:right; }
+
+.atrium-welcome-links a span.spaces-feature {
+  float:right;
+  margin-right:0px;
+  margin-left:10px;
   }

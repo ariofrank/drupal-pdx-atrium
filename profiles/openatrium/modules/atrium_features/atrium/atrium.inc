@@ -124,10 +124,20 @@ function _atrium_form_spaces_features_form_alter(&$form, $form_state) {
       '#type' => 'select',
       '#description' => t('Choose the access mode for the member directory and profiles. Administrators and managers will be able to see all members regardless of this setting.'),
       '#options' => array(
-        ATRIUM_MEMBERS_ALL=> t('Users can view all members'),
+        ATRIUM_MEMBERS_ALL => t('Users can view all members'),
         ATRIUM_MEMBERS_GROUP => t('Users can only view members that belong to their groups')
       ),
       '#default_value' => variable_get('atrium_members', ATRIUM_MEMBERS_ALL),
+    );
+    $form['atrium']['atrium_notifications'] = array(
+      '#title' => t('Notifications'),
+      '#type' => 'select',
+      '#description' => t('Choose the notifications UI for this site.'),
+      '#options' => array(
+        ATRIUM_NOTIFICATIONS_TEAM => t('Small team: authors subscribe others to their posts'),
+        ATRIUM_NOTIFICATIONS_SUBSCRIBE => t('Community: users subscribe to posts on their own')
+      ),
+      '#default_value' => variable_get('atrium_notifications', ATRIUM_NOTIFICATIONS_TEAM),
     );
     $form['#submit'][] = 'atrium_form_spaces_features_form_submit';
   }
@@ -274,46 +284,6 @@ function atrium_reactivate_submit($form, &$form_state) {
 }
 
 /**
- * Custom welcome/login page.
- */
-function atrium_welcome() {
-  if (!user_access('access content')) {
-    menu_set_active_item('user'); // we need tabs to show up
-    drupal_set_title(t('Please Login'));
-    $login = drupal_get_form('user_login');
-    return $login;
-  }
-  else {
-    $firstgroup = variable_get('atrium_firstgroup', FALSE);
-    if (!$firstgroup) {
-      if ($result = db_result(db_query("SELECT count(*) FROM {node} WHERE type = 'group'"))) {
-        variable_set('atrium_firstgroup', TRUE);
-        $firstgroup = TRUE;
-      }
-    }
-    if ($firstgroup) {
-      menu_set_active_item('dashboard');
-      return menu_execute_active_handler();
-    }
-    else {
-      drupal_set_title(t('Welcome to !sitename', array('!sitename' => variable_get('site_name', 'Atrium'))));
-
-      $output = "<div class='view-empty'>";
-      if (node_access('create', 'group')) {
-        $output .= t('Create your first !type to get started.', array('!type' => node_get_types('name', 'group')));
-        $output .= "<div class='buttons'>". l(t('Create !type', array('!type' => node_get_types('name', 'group'))), 'node/add/group', array('attributes' => array('class' => 'button'))) ."</div>";
-      }
-      else {
-        $output .= t('The site administator has not finished setting up this site. Please be patient and try again later.');
-      }
-      $output .= "</div>";
-
-      return $output;
-    }
-  }
-}
-
-/**
  * User help callback
  */
 function atrium_help_page($name = null) {
@@ -391,9 +361,9 @@ function atrium_user_default_permissions_extra() {
   // 2. A global flag that prevents alters from running when Features, CTools
   //    and other exportables tools are in the processing of building or
   //    exporting components.
-  global $install_locale;
+  global $profile;
   $permissions = array();
-  if (context_get('atrium', 'access_perms') || !empty($install_locale)) {
+  if (context_get('atrium', 'access_perms') || !empty($profile)) {
     if (!variable_get('user_register', FALSE)) {
       $permissions = array(
         array(
@@ -448,8 +418,26 @@ function atrium_user_default_permissions_extra() {
         );
         break;
     }
+    switch (variable_get('atrium_notifications', ATRIUM_NOTIFICATIONS_TEAM)) {
+      case ATRIUM_NOTIFICATIONS_TEAM:
+        if (empty($profile)) {
+          !module_exists('notifications_team') ? drupal_install_modules(array('notifications_team')) : TRUE;
+          module_exists('notifications_ui') ? module_disable(array('notifications_ui')) : TRUE;
+        }
+        $permissions[] = array(
+          'name' => 'subscribe other users',
+          'roles' => array('authenticated user', 'manager', 'admin'),
+        );
+        break;
+      case ATRIUM_NOTIFICATIONS_SUBSCRIBE:
+        if (empty($profile)) {
+          module_exists('notifications_team') ? module_disable(array('notifications_team')) : TRUE;
+          !module_exists('notifications_ui') ? drupal_install_modules(array('notifications_ui')) : TRUE;
+        }
+        break;
+    }
     // If in the middle of installation, merge all perms together.
-    return !empty($install_locale) ? array_merge($permissions, _atrium_user_default_permissions()) : $permissions;
+    return !empty($profile) ? array_merge($permissions, _atrium_user_default_permissions()) : $permissions;
   }
   return _atrium_user_default_permissions();
 }

@@ -1,5 +1,5 @@
 <?php
-// $Id: boxes.module,v 1.1 2010/02/02 00:46:04 jmiccolis Exp $
+// $Id: boxes.module,v 1.4 2010/02/17 18:27:53 jmiccolis Exp $
 
 /**
  * Implementation of hook_menu().
@@ -75,16 +75,6 @@ function boxes_forms($form_id) {
  * Implementation of hook_block().
  */
 function boxes_block($op = 'list', $delta = '', $edit = array()) {
-  static $add_js;
-  if (!$add_js) {
-    drupal_add_js('misc/ahah.js');
-    drupal_add_js('misc/jquery.form.js');
-    drupal_add_js(drupal_get_path('module', 'boxes') . '/boxes.js');
-    drupal_add_js(array('boxes' => array('ajaxSubmit' => url('boxes/ajax-submit'), 'ajaxDelete' => url('boxes/ajax-delete'))), 'setting');
-    drupal_add_css(drupal_get_path('module', 'boxes') . '/boxes.css');
-    $add_js = true;
-  }
-
   switch ($op) {
     case 'list':
       $boxes = boxes_load();
@@ -94,13 +84,10 @@ function boxes_block($op = 'list', $delta = '', $edit = array()) {
         // Not worth caching.
         $blocks[$box->delta]['cache'] = BLOCK_NO_CACHE;
       }
-      // Only include the mysterious 'add' block when not in the admin
-      // section -- that is, we're editing a page directly & dynamically.
-      if (boxes_access_admin() && arg(0) !== 'admin') {
-        $blocks['add']['info'] = t('Add custom block');
-        $blocks['add']['cache'] = BLOCK_NO_CACHE;
-      }
-      drupal_alter('boxes_list', $blocks);
+
+      // 'add' block for editing a page inline
+      $blocks['add']['info'] = t('Add custom block');
+      $blocks['add']['cache'] = BLOCK_NO_CACHE;
       return $blocks;
 
     case 'configure':
@@ -123,6 +110,9 @@ function boxes_block($op = 'list', $delta = '', $edit = array()) {
       break;
 
     case 'view':
+      // Add boxes JS.
+      boxes_add_js();
+
       $block = array();
       ctools_include('export');
 
@@ -347,8 +337,8 @@ function boxes_spaces_registry() {
 function boxes_spaces_dashboard_block_access_alter(&$access, $block) {
   if ($block->module === 'boxes') {
     // This is the add block, give access to admins.
-    if ($block->delta === 'add' && (boxes_access_admin())) {
-      $access = TRUE;
+    if ($block->delta === 'add') {
+      $access = boxes_access_admin();
     }
     // If this box is specific to the current space, allow access.
     else if (module_exists('spaces') && $space = spaces_get_space()) {
@@ -363,23 +353,27 @@ function boxes_spaces_dashboard_block_access_alter(&$access, $block) {
 }
 
 /**
- * Implementation of hook_boxes_list_alter().
+ * Implementation of hook_context_block_info_alter().
  *
- * Provides spaces integration when listing boxes.
+ * Provides spaces integration when working with blocks using context.
  */
-function boxes_boxes_list_alter(&$blocks) {
+function boxes_context_block_info_alter(&$blocks) {
+  // Add boxes JS. If this is getting called, it's highly likely a context
+  // inline editor is on the page.
+  boxes_add_js();
+
   if (module_exists('spaces') && $space = spaces_get_space()) {
     $item = menu_get_item();
     // Prevent space-specific blocks from appearing on the dashboard settings
     // page within a space.
     if (!(isset($item['page_callback'], $item['page_arguments'][0]) && $item['page_callback'] === 'drupal_get_form' && $item['page_arguments'][0] === 'spaces_dashboard_admin_form')) {
       foreach ($space->controllers->boxes->get() as $box) {
-        if (isset($blocks[$box->delta])) {
-          $blocks[$box->delta] = array_merge($blocks[$box->delta], array('info' => $box->description));
-        }
-        else {
-          $blocks[$box->delta] = array('info' => $box->description, 'cache' => BLOCK_NO_CACHE);
-        }
+        $add = new stdClass();
+        $add->bid = "boxes-{$box->delta}";
+        $add->info = $box->description;
+        $add->cache = BLOCK_NO_CACHE;
+        $add->module = 'boxes';
+        $blocks[$add->bid] = $add;
       }
     }
   }
@@ -394,5 +388,20 @@ function boxes_boxes_view_alter(&$box, $delta) {
   if (module_exists('spaces') && $space = spaces_get_space()) {
     $space_box = $space->controllers->boxes->get($delta);
     $box = $space_box ? $space_box : $box;
+  }
+}
+
+/**
+ * Wrapper function for adding all the boxes JS components.
+ */
+function boxes_add_js() {
+  static $add_js;
+  if (!$add_js && boxes_access_admin()) {
+    drupal_add_js('misc/ahah.js');
+    drupal_add_js('misc/jquery.form.js');
+    drupal_add_js(drupal_get_path('module', 'boxes') . '/boxes.js');
+    drupal_add_js(array('boxes' => array('ajaxSubmit' => url('boxes/ajax-submit'), 'ajaxDelete' => url('boxes/ajax-delete'))), 'setting');
+    drupal_add_css(drupal_get_path('module', 'boxes') . '/boxes.css');
+    $add_js = true;
   }
 }
