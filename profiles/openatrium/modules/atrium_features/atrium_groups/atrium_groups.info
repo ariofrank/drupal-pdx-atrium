@@ -37,5 +37,11 @@ features[variable][] = "upload_group"
 features[views][] = "atrium_groups"
 name = "Atrium Groups"
 package = "Atrium"
-project = "atrium_groups"
 spaces[types][] = "site"
+
+; Information added by fserver
+core = "6.x"
+datestamp = "1266518101"
+project = "atrium_features"
+project status url = "http://code.developmentseed.org/fserver"
+version = "6.x-1.0-alpha3"

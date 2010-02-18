@@ -1,5 +1,5 @@
 <?php
-// $Id: mailcomment.module,v 1.1.2.17 2010/02/12 16:42:15 developmentseed Exp $
+// $Id: mailcomment.module,v 1.1.2.18 2010/02/17 23:28:55 developmentseed Exp $
 /**
  * Mail 2 Site gateway
  *
@@ -150,6 +150,26 @@ function mailcomment_admin_settings() {
     but instead will return it to mailhandler to decide how to handle it.'),
     '#default_value' => variable_get('mailcomment_passthru', 0),
     '#options' => array(t('Off'), t('On')),
+  );
+  module_load_include('inc', 'mailhandler', 'mailhandler.retrieve');
+  $options = array();
+  $descriptions = '';
+  $options[0] = t('None');
+  $methods = mailhandler_mailhandler_authenticate('info');
+  foreach ($methods as $method) {
+    foreach ($method as $name => $info) {
+      $options[$name] = t($info['title']);
+      // TODO: theme function
+      $descriptions .= t($info['title']) .": ". t($info['description']) . "\n";
+    }
+  }
+  $form['mailcomment_passthru_authentication'] = array(
+    '#type' => 'select',
+    '#title' => t('Use default mailhandler authentication during passthru'),
+    '#description' => t('Authenticate messages using Mailhandler\'s default authentication method which authenticates based on the sender\'s email address.
+      This is less secure but often more convenient.  This option is only useful if relying on "Passthru to mailhandler module".'),
+    '#default_value' => variable_get('mailcomment_passthru_authentication', ''),
+    '#options' => $options,
   );
   return system_settings_form($form);
 }
@@ -628,10 +648,12 @@ function mailcomment_authenticate_default($node, $header, $origbody, $mailbox) {
     $node->name = $account->name;
   }
   // If user is not determined from parameters, given tokenauth a chance
-  else {
-    if (function_exists('mailhandler_authenticate_tokenauth')) {
-      mailhandler_authenticate_tokenauth($node, $header, $oridbody, $mailbox);
-    }
+  elseif (function_exists('mailhandler_authenticate_tokenauth')) {
+    mailhandler_authenticate_tokenauth($node, $header, $oridbody, $mailbox);
+  }
+  if (!$node->uid && variable_get('mailcomment_passthru', 0) && variable_get('mailcomment_passthru_authentication', '')) {
+    module_load_include('inc', 'mailhandler', 'mailhandler.retrieve');
+    mailhandler_mailhandler_authenticate('execute', variable_get('mailcomment_passthru_authentication', ''), array($node, $header, $origbody, $mailbox));
   }
   return $node;
 }

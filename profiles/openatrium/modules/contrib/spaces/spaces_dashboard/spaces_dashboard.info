@@ -13,3 +13,10 @@ features[menu][] = "dashboard"
 name = "Spaces Dashboard"
 package = "Features"
 spaces[types] = "all"
+
+; Information added by drupal.org packaging script on 2010-02-17
+version = "6.x-3.0-beta2"
+core = "6.x"
+project = "spaces"
+datestamp = "1266436826"
+

@@ -1,5 +1,5 @@
 <?php
-// $Id: FeedsSource.inc,v 1.8 2010/02/11 00:26:49 alexb Exp $
+// $Id: FeedsSource.inc,v 1.6 2009/12/20 23:48:38 alexb Exp $
 
 /**
  * @file
@@ -76,9 +76,6 @@ class FeedsSource extends FeedsConfigurable {
   // The FeedsImporter object that this source is expected to be used with.
   protected $importer;
 
-  // A FeedsBatch object. NULL if there is no active batch.
-  protected $batch;
-
   /**
    * Instantiate a unique object per class/id/feed_nid. Don't use
    * directly, use feeds_source() instead.
@@ -105,58 +102,35 @@ class FeedsSource extends FeedsConfigurable {
   /**
    * Import a feed: execute, fetching, parsing and processing stage.
    *
-   * Lock a source before importing by using FeedsSource::lock(), after
-   * importing, release with FeedsSource::release().
-   *
-   * @throws
-   *   Throws Exception if an error occurs when importing.
+   * @todo Iron out and document potential Exceptions.
+   * @todo Support batching.
+   * @todo catch exceptions outside of import(), clear() and expire().
    */
   public function import() {
     try {
-      if (!$this->batch || !($this->batch instanceof FeedsImportBatch)) {
-        $this->batch = $this->importer->fetcher->fetch($this);
-        $this->importer->parser->parse($this->batch, $this);
-      }
-      $result = $this->importer->processor->process($this->batch, $this);
-      if ($result == FEEDS_BATCH_COMPLETE) {
-        unset($this->batch);
-        module_invoke_all('feeds_after_import', $this->importer, $this);
-      }
+      $feed = $this->importer->fetcher->fetch($this);
+      $this->importer->parser->parse($feed, $this);
+      $this->importer->processor->process($feed, $this);
+      unset($feed);
     }
     catch (Exception $e) {
-      unset($this->batch);
-      $this->save();
-      throw $e;
+      drupal_set_message($e->getMessage(), 'error');
     }
-    $this->save();
-    return $result;
+    module_invoke_all('feeds_after_import', $this->importer, $this);
   }
 
   /**
    * Remove all items from a feed.
-   *
-   * @throws
-   *   Throws Exception if an error occurs when clearing.
    */
   public function clear() {
     try {
       $this->importer->fetcher->clear($this);
       $this->importer->parser->clear($this);
-      if (!$this->batch) {
-        $this->batch = new FeedsBatch();
-      }
-      $result = $this->importer->processor->clear($this->batch, $this);
-      if ($result == FEEDS_BATCH_COMPLETE) {
-        unset($this->batch);
-      }
+      $this->importer->processor->clear($this);
     }
     catch (Exception $e) {
-      unset($this->batch);
-      $this->save();
-      throw $e;
+      drupal_set_message($e->getMessage(), 'error');
     }
-    $this->save();
-    return $result;
   }
 
   /**
@@ -175,7 +149,6 @@ class FeedsSource extends FeedsConfigurable {
       'feed_nid' => $this->feed_nid,
       'config' => $config,
       'source' => $source,
-      'batch' => isset($this->batch) ? $this->batch : FALSE,
     );
     // Make sure a source record is present at all time, try to update first,
     // then insert.
@@ -191,13 +164,12 @@ class FeedsSource extends FeedsConfigurable {
    * @todo Patch CTools to move constants from export.inc to ctools.module.
    */
   public function load() {
-    if ($record = db_fetch_object(db_query('SELECT config, batch FROM {feeds_source} WHERE id = "%s" AND feed_nid = %d', $this->id, $this->feed_nid))) {
+    if ($config = db_result(db_query('SELECT config FROM {feeds_source} WHERE id = "%s" AND feed_nid = %d', $this->id, $this->feed_nid))) {
       // While FeedsSource cannot be exported, we still use CTool's export.inc
       // export definitions.
       ctools_include('export');
       $this->export_type = EXPORT_IN_DATABASE;
-      $this->config = unserialize($record->config);
-      $this->batch = unserialize($record->batch);
+      $this->config = unserialize($config);
     }
   }
 

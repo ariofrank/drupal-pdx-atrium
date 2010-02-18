@@ -1,5 +1,5 @@
 <?php
-// $Id: spaces_og.test,v 1.1.2.4 2010/02/04 06:17:15 yhahn Exp $
+// $Id: spaces_og.test,v 1.1.2.5 2010/02/15 19:34:04 jmiccolis Exp $
 
 class SpacesOGTestCRUD extends SpacesOGTestCase {
   /**
@@ -463,6 +463,39 @@ class SpacesOGTestAccess extends SpacesOGTestCase {
     $this->assertResponse(200);
     $this->drupalPost('group-c/node/add/blog', array('title' => 'Another private post'), 'Save');
     $this->assertText('Blog Another private post has been created.');
+
+    /**
+     * Privacy switch test =====================================================
+     */
+    $this->loginAdminUser();
+    $edit = array(
+      'spaces_preset_og' => 'og_public',
+    );
+    $this->drupalPost('group-c/node/5/edit', $edit, 'Save');
+    $this->assertText('The content access permissions need to be rebuilt.');
+    $this->drupalPost('admin/content/node-settings/rebuild', array(), 'Rebuild permissions');
+
+    $this->drupalPost("group-c/og/unsubscribe/5/{$this->simple_user->uid}", array(), 'Remove');
+    $this->loginSimpleUser();
+    $this->drupalGet('group-c/node/5');
+    $this->assertResponse(200);
+    $this->assertText('Group C');
+    $this->drupalGet('group-c/node/6');
+    $this->assertResponse(200);
+
+    $this->loginAdminUser();
+    $edit = array(
+      'spaces_preset_og' => 'og_private',
+    );
+    $this->drupalPost('group-c/node/5/edit', $edit, 'Save');
+    $this->assertText('The content access permissions need to be rebuilt.');
+    $this->drupalPost('admin/content/node-settings/rebuild', array(), 'Rebuild permissions');
+
+    $this->loginSimpleUser();
+    $this->drupalGet('group-c/node/5');
+    $this->assertResponse(403);
+    $this->drupalGet('group-c/node/6');
+    $this->assertResponse(403);
   }
 }
 

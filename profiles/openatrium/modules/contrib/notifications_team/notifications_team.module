@@ -1,5 +1,5 @@
 <?php
-// $Id: notifications_team.module,v 1.1.2.10.2.8 2009/06/26 17:34:53 jmiccolis Exp $
+// $Id: notifications_team.module,v 1.1.2.10.2.10 2009/09/03 22:10:48 developmentseed Exp $
 
 /**
  * notifications_team provides a GUI for subscribing to content
@@ -186,7 +186,9 @@ function notifications_team_form($nid) {
         $u = $users[$u];
         $user_names[$u->uid] = $u->name;
       }
-      asort($user_names);
+      if (is_array($user_names)) {
+        asort($user_names);
+      }
     }
     else {
       foreach($users as $u) {
@@ -288,7 +290,7 @@ function notifications_team_comment(&$comment, $op) {
  */
 function notifications_team_nodeapi(&$node, $op, $teaser) {
   if (($op == 'update' || $op == 'insert') && $node->nid) {
-    if (notifications_content_type_enabled($node->type, 'thread')) {
+    if (isset($node->notifications_team)) {
       $new_uids =  explode(',', $node->notifications_team['selected']);
       if ($node->notifications_team['listed']) {
         $textunames = explode(',', $node->notifications_team['listed']);

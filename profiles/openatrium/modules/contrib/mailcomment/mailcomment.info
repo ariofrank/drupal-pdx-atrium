@@ -6,9 +6,9 @@ dependencies[] = notifications
 dependencies[] = mailhandler
 core = 6.x
 
-; Information added by drupal.org packaging script on 2010-02-12
-version = "6.x-1.0-beta6"
+; Information added by drupal.org packaging script on 2010-02-18
+version = "6.x-1.0"
 core = "6.x"
 project = "mailcomment"
-datestamp = "1265994610"
+datestamp = "1266451212"
 

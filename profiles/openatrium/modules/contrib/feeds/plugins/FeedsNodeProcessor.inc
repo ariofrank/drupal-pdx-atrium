@@ -1,13 +1,10 @@
 <?php
-// $Id: FeedsNodeProcessor.inc,v 1.22 2010/02/10 23:49:35 alexb Exp $
+// $Id: FeedsNodeProcessor.inc,v 1.21 2010/01/28 19:52:34 alexb Exp $
 
 /**
  * @file
  * Class definition of FeedsNodeProcessor.
  */
-
-// Create or delete FEEDS_NODE_BATCH_SIZE at a time.
-define('FEEDS_NODE_BATCH_SIZE', 50);
 
 /**
  * Creates nodes from feed items.
@@ -19,8 +16,8 @@ class FeedsNodeProcessor extends FeedsProcessor {
    */
   public function process(FeedsImportBatch $batch, FeedsSource $source) {
 
-    // Keep track of processed items in this pass.
-    $processed = 0;
+    // Count number of created and updated nodes.
+    $created = $updated = 0;
 
     while ($item = $batch->shiftItem()) {
 
@@ -41,10 +38,10 @@ class FeedsNodeProcessor extends FeedsProcessor {
           // If updating populate nid and vid avoiding an expensive node_load().
           $node->nid = $nid;
           $node->vid = db_result(db_query('SELECT vid FROM {node} WHERE nid = %d', $nid));
-          $batch->updated++;
+          $updated++;
         }
         else {
-          $batch->created++;
+          $created++;
         }
 
         // Populate and prepare node object.
@@ -72,52 +69,41 @@ class FeedsNodeProcessor extends FeedsProcessor {
         // Save the node.
         node_save($node);
       }
-
-      $processed++;
-      if ($processed >= variable_get('feeds_node_batch_size', FEEDS_NODE_BATCH_SIZE)) {
-        return (1.0 / ($batch->total + 1)) * ($batch->updated + $batch->created); // Add + 1 to make sure that result is not 1.0 = finished.
-      }
     }
 
     // Set messages.
-    if ($batch->created) {
-      drupal_set_message(t('Created !number !type nodes.', array('!number' => $batch->created, '!type' => node_get_types('name', $this->config['content_type']))));
+    if ($created) {
+      drupal_set_message(t('Created !number !type nodes.', array('!number' => $created, '!type' => node_get_types('name', $this->config['content_type']))));
     }
-    elseif ($batch->updated) {
-      drupal_set_message(t('Updated !number !type nodes.', array('!number' => $batch->updated, '!type' => node_get_types('name', $this->config['content_type']))));
+    elseif ($updated) {
+      drupal_set_message(t('Updated !number !type nodes.', array('!number' => $updated, '!type' => node_get_types('name', $this->config['content_type']))));
     }
     else {
       drupal_set_message(t('There is no new content.'));
     }
-
-    return FEEDS_BATCH_COMPLETE;
   }
 
   /**
    * Implementation of FeedsProcessor::clear().
    */
-  public function clear(FeedsBatch $batch, FeedsSource $source) {
-    if (empty($batch->total)) {
-      $batch->total = db_result(db_query("SELECT COUNT(nid) FROM {feeds_node_item} WHERE feed_nid = %d", $source->feed_nid));
-    }
-    $result = db_query_range('SELECT nid FROM {feeds_node_item} WHERE feed_nid = %d', $source->feed_nid, 0, variable_get('feeds_node_batch_size', FEEDS_NODE_BATCH_SIZE));
+  public function clear(FeedsSource $source) {
+    // Count number of deleted nodes.
+    $deleted = 0;
+
+    $result = db_query('SELECT nid FROM {feeds_node_item} WHERE feed_nid = %d', $source->feed_nid);
     while ($node = db_fetch_object($result)) {
       _feeds_node_delete($node->nid);
-      $batch->deleted++;
-    }
-    if (db_result(db_query_range('SELECT nid FROM {feeds_node_item} WHERE feed_nid = %d', $source->feed_nid, 0, 1))) {
-      return (1.0 / ($batch->total + 1)) * $batch->deleted;
+      $deleted++;
     }
 
     // Set message.
     drupal_get_messages('status');
-    if ($batch->deleted) {
-      drupal_set_message(t('Deleted !number nodes.', array('!number' => $batch->deleted)));
+    if ($deleted) {
+      drupal_set_message(t('Deleted !number nodes.', array('!number' => $deleted)));
     }
     else {
       drupal_set_message(t('There is no content to be deleted.'));
     }
-    return FEEDS_BATCH_COMPLETE;
   }
 
   /**
@@ -130,14 +116,14 @@ class FeedsNodeProcessor extends FeedsProcessor {
     if ($time == FEEDS_EXPIRE_NEVER) {
       return;
     }
-    $result = db_query_range('SELECT n.nid FROM {node} n JOIN {feeds_node_item} fni ON n.nid = fni.nid WHERE fni.id = "%s" AND n.created < %d', $this->id, FEEDS_REQUEST_TIME - $time, 0, variable_get('feeds_node_batch_size', FEEDS_NODE_BATCH_SIZE));
+    // @todo Expires 50 at a time at the moment.
+    // Create a way of letting the caller know whether all nodes could be
+    // deleted. Has to be thought through in a larger context of batch
+    // processing support for import and expiry.
+    $result = db_query('SELECT n.nid FROM {node} n JOIN {feeds_node_item} fni ON n.nid = fni.nid WHERE fni.id = "%s" AND n.created < %d', $this->id, FEEDS_REQUEST_TIME - $time, 0, 50);
     while ($node = db_fetch_object($result)) {
       _feeds_node_delete($node->nid);
     }
-    if (db_result(db_query_range('SELECT n.nid FROM {node} n JOIN {feeds_node_item} fni ON n.nid = fni.nid WHERE fni.id = "%s" AND n.created < %d', $this->id, FEEDS_REQUEST_TIME - $time, 0, 1))) {
-      return FEEDS_BATCH_ACTIVE;
-    }
-    return FEEDS_BATCH_COMPLETE;
   }
 
   /**
